@@ -110,7 +110,7 @@ router.post("/bets", async (req: AuthRequest, res: Response) => {
     return;
   }
   if (isNaN(unitNum) || unitNum <= 0) {
-    res.status(400).json({ success: false, message: "L'unité doit être un nombre positif." });
+    res.status(400).json({ success: false, message: "L'unité doit être un nombre positif (ex: 0.75, 1, 1.5)." });
     return;
   }
 
