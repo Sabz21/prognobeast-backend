@@ -139,6 +139,38 @@ router.post("/bets", async (req: AuthRequest, res: Response) => {
   }
 });
 
+// PUT /api/admin/bets/:id (modifier sport, description, odds, unit)
+router.put("/bets/:id", async (req: AuthRequest, res: Response) => {
+  const { sport, description, odds, unit } = req.body;
+
+  if (!sport?.trim() || !description?.trim() || odds == null || unit == null) {
+    res.status(400).json({ success: false, message: "Tous les champs sont requis." });
+    return;
+  }
+
+  const oddsNum = Number(odds);
+  const unitNum = Number(unit);
+
+  if (isNaN(oddsNum) || oddsNum <= 1) {
+    res.status(400).json({ success: false, message: "La cote doit être supérieure à 1." });
+    return;
+  }
+  if (isNaN(unitNum) || unitNum <= 0) {
+    res.status(400).json({ success: false, message: "L'unité doit être positive." });
+    return;
+  }
+
+  try {
+    const bet = await prisma.bet.update({
+      where: { id: req.params.id },
+      data: { sport: sport.trim(), description: description.trim(), odds: oddsNum, unit: unitNum },
+    });
+    res.json({ success: true, message: "Pari modifié.", data: bet });
+  } catch {
+    res.status(404).json({ success: false, message: "Pari introuvable." });
+  }
+});
+
 // PUT /api/admin/bets/:id/result
 router.put("/bets/:id/result", async (req: AuthRequest, res: Response) => {
   const { result } = req.body;
