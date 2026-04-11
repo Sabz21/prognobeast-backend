@@ -68,14 +68,6 @@ router.put("/:id/follow", async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    if (bet.status !== "PENDING") {
-      res.status(400).json({
-        success: false,
-        message: "Le résultat de ce pari a déjà été enregistré, vous ne pouvez plus modifier votre suivi.",
-      });
-      return;
-    }
-
     const userBet = await prisma.userBet.upsert({
       where: { userId_betId: { userId, betId } },
       update: { followed: Boolean(followed) },
