@@ -95,7 +95,7 @@ router.get("/bets", async (_req: AuthRequest, res: Response) => {
 
 // POST /api/admin/bets
 router.post("/bets", async (req: AuthRequest, res: Response) => {
-  const { sport, description, odds, unit } = req.body;
+  const { sport, description, odds, unit, date } = req.body;
 
   if (!sport?.trim() || !description?.trim() || odds == null) {
     res.status(400).json({ success: false, message: "Sport, description et cote sont requis." });
@@ -114,9 +114,15 @@ router.post("/bets", async (req: AuthRequest, res: Response) => {
     return;
   }
 
+  const betDate = date ? new Date(date) : new Date();
+  if (date && isNaN(betDate.getTime())) {
+    res.status(400).json({ success: false, message: "Date invalide." });
+    return;
+  }
+
   try {
     const bet = await prisma.bet.create({
-      data: { sport: sport.trim(), description: description.trim(), odds: oddsNum, unit: unitNum },
+      data: { sport: sport.trim(), description: description.trim(), odds: oddsNum, unit: unitNum, createdAt: betDate },
     });
 
     // Créer des entrées UserBet pour tous les membres VIP approuvés
