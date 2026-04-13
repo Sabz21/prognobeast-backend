@@ -6,6 +6,8 @@ import contactRouter from "./routes/contact";
 import authRouter from "./routes/auth";
 import adminRouter from "./routes/admin";
 import betsRouter from "./routes/bets";
+import montantesRouter from "./routes/montantes";
+import adminMontantesRouter from "./routes/adminMontantes";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "4000", 10);
@@ -43,6 +45,8 @@ app.use("/api/contact", contactRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/bets", betsRouter);
+app.use("/api/montantes", montantesRouter);
+app.use("/api/admin/montantes", adminMontantesRouter);
 
 // 404 catch-all
 app.use((_req: Request, res: Response) => {

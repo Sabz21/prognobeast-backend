@@ -17,7 +17,8 @@ model User {
   status       Status    @default(PENDING)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  userBets     UserBet[]
+  userBets      UserBet[]
+  userMontantes UserMontante[]
 }
 
 enum Role {
@@ -58,4 +59,46 @@ model UserBet {
   bet      Bet     @relation(fields: [betId], references: [id], onDelete: Cascade)
 
   @@unique([userId, betId])
+}
+
+// ── Montantes ──────────────────────────────────────────────────────────────────
+
+model Montante {
+  id          String         @id @default(cuid())
+  number      Int
+  startDate   DateTime
+  description String?
+  status      String         @default("ACTIVE") // ACTIVE, COMPLETED, CANCELLED
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  steps         MontanteStep[]
+  userMontantes UserMontante[]
+}
+
+model MontanteStep {
+  id          String   @id @default(cuid())
+  montanteId  String
+  stepNumber  Int
+  sport       String
+  description String
+  odds        Float
+  status      String   @default("PENDING") // PENDING, WON, LOST
+  createdAt   DateTime @default(now())
+
+  montante Montante @relation(fields: [montanteId], references: [id], onDelete: Cascade)
+}
+
+model UserMontante {
+  id           String   @id @default(cuid())
+  userId       String
+  montanteId   String
+  initialStake Float?
+  following    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  montante Montante @relation(fields: [montanteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, montanteId])
 }
