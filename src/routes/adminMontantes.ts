@@ -149,12 +149,37 @@ router.post("/:id/steps", async (req: AuthRequest, res: Response) => {
   }
 });
 
+// PUT /api/admin/montantes/:id/steps/:stepId — modifier sport/description/odds d'une étape
+router.put("/:id/steps/:stepId", async (req: AuthRequest, res: Response) => {
+  const { sport, description, odds } = req.body;
+
+  const oddsNum = Number(odds);
+  if (isNaN(oddsNum) || oddsNum <= 1) {
+    res.status(400).json({ success: false, message: "La cote doit être supérieure à 1." });
+    return;
+  }
+
+  try {
+    const step = await prisma.montanteStep.update({
+      where: { id: req.params.stepId },
+      data: {
+        sport: sport?.trim() || undefined,
+        description: description?.trim() || undefined,
+        odds: oddsNum,
+      },
+    });
+    res.json({ success: true, message: "Étape modifiée.", data: step });
+  } catch {
+    res.status(404).json({ success: false, message: "Étape introuvable." });
+  }
+});
+
 // PUT /api/admin/montantes/:id/steps/:stepId/result — résultat d'une étape
 router.put("/:id/steps/:stepId/result", async (req: AuthRequest, res: Response) => {
   const { result } = req.body;
 
-  if (!["WON", "LOST"].includes(result)) {
-    res.status(400).json({ success: false, message: "Résultat invalide. Utilisez WON ou LOST." });
+  if (!["WON", "LOST", "PENDING"].includes(result)) {
+    res.status(400).json({ success: false, message: "Résultat invalide. Utilisez WON, LOST ou PENDING." });
     return;
   }
 
@@ -164,11 +189,16 @@ router.put("/:id/steps/:stepId/result", async (req: AuthRequest, res: Response) 
       data: { status: result },
     });
 
-    // Si LOST → la montante est terminée
+    // Si LOST → la montante est terminée ; si PENDING → réactiver
     if (result === "LOST") {
       await prisma.montante.update({
         where: { id: req.params.id },
         data: { status: "COMPLETED" },
+      });
+    } else if (result === "PENDING") {
+      await prisma.montante.update({
+        where: { id: req.params.id },
+        data: { status: "ACTIVE" },
       });
     }
 
