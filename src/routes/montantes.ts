@@ -16,7 +16,7 @@ router.get("/", async (req: AuthRequest, res: Response) => {
       orderBy: { number: "asc" },
       include: {
         steps: { orderBy: { stepNumber: "asc" } },
-        userMontantes: { where: { userId }, select: { following: true, initialStake: true } },
+        userMontantes: { where: { userId }, select: { following: true, initialStake: true, stepOdds: true } },
         _count: { select: { userMontantes: true } },
       },
     });
@@ -37,6 +37,7 @@ router.get("/", async (req: AuthRequest, res: Response) => {
         steps: m.steps,
         following: userM?.following ?? false,
         initialStake: userM?.initialStake ?? null,
+        stepOdds: (userM?.stepOdds as Record<string, number> | null) ?? null,
         totalFollowers: m._count.userMontantes,
         wonSteps,
         lostSteps,
@@ -55,7 +56,7 @@ router.get("/", async (req: AuthRequest, res: Response) => {
 router.put("/:id/participate", async (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
   const montanteId = req.params.id;
-  const { following, initialStake } = req.body;
+  const { following, initialStake, stepOdds } = req.body;
 
   try {
     const montante = await prisma.montante.findUnique({ where: { id: montanteId } });
@@ -69,12 +70,14 @@ router.put("/:id/participate", async (req: AuthRequest, res: Response) => {
       update: {
         following: Boolean(following),
         initialStake: initialStake != null ? Number(initialStake) : undefined,
+        ...(stepOdds !== undefined && { stepOdds }),
       },
       create: {
         userId,
         montanteId,
         following: Boolean(following),
         initialStake: initialStake != null ? Number(initialStake) : null,
+        stepOdds: stepOdds ?? null,
       },
     });
 

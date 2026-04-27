@@ -95,6 +95,7 @@ model UserMontante {
   montanteId   String
   initialStake Float?
   following    Boolean  @default(false)
+  stepOdds     Json?
   createdAt    DateTime @default(now())
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
