@@ -207,4 +207,64 @@ router.delete("/bets/:id", async (req: AuthRequest, res: Response) => {
   }
 });
 
+// GET /api/admin/leaderboard?period=day|week|month|all
+router.get("/leaderboard", async (req: AuthRequest, res: Response) => {
+  const period = (req.query.period as string) || "all";
+  const now = new Date();
+  let from: Date | undefined;
+  if (period === "day") {
+    from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (period === "week") {
+    const sd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    sd.setDate(sd.getDate() - (sd.getDay() || 7) + 1);
+    from = sd;
+  } else if (period === "month") {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  try {
+    const userBets = await prisma.userBet.findMany({
+      where: {
+        followed: true,
+        bet: {
+          status: { not: "PENDING" },
+          ...(from ? { createdAt: { gte: from } } : {}),
+        },
+      },
+      include: {
+        bet: { select: { status: true, unit: true, odds: true } },
+        user: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    const userMap: Record<string, {
+      firstName: string; lastName: string;
+      followedCount: number; wonCount: number; lostCount: number; totalUnits: number;
+    }> = {};
+
+    for (const ub of userBets) {
+      const uid = ub.user.id;
+      if (!userMap[uid]) {
+        userMap[uid] = { firstName: ub.user.firstName, lastName: ub.user.lastName, followedCount: 0, wonCount: 0, lostCount: 0, totalUnits: 0 };
+      }
+      userMap[uid].followedCount++;
+      const gl = ub.bet.status === "WON"
+        ? parseFloat(((ub.bet.odds - 1) * ub.bet.unit).toFixed(2))
+        : parseFloat((-ub.bet.unit).toFixed(2));
+      userMap[uid].totalUnits = parseFloat((userMap[uid].totalUnits + gl).toFixed(2));
+      if (ub.bet.status === "WON") userMap[uid].wonCount++;
+      else userMap[uid].lostCount++;
+    }
+
+    const data = Object.entries(userMap)
+      .map(([userId, u]) => ({ userId, ...u }))
+      .sort((a, b) => b.totalUnits - a.totalUnits);
+
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Erreur serveur." });
+  }
+});
+
 export default router;
