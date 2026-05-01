@@ -207,19 +207,26 @@ router.delete("/bets/:id", async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/admin/leaderboard?period=day|week|month|all
+// GET /api/admin/leaderboard?period=day|week|month|all|specificMonth&month=YYYY-MM
 router.get("/leaderboard", async (req: AuthRequest, res: Response) => {
   const period = (req.query.period as string) || "all";
   const now = new Date();
-  let from: Date | undefined;
+  let dateFilter: { gte?: Date; lt?: Date } = {};
+
   if (period === "day") {
-    from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    dateFilter = { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) };
   } else if (period === "week") {
     const sd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     sd.setDate(sd.getDate() - (sd.getDay() || 7) + 1);
-    from = sd;
+    dateFilter = { gte: sd };
   } else if (period === "month") {
-    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    dateFilter = { gte: new Date(now.getFullYear(), now.getMonth(), 1) };
+  } else if (period === "specificMonth") {
+    const monthKey = req.query.month as string;
+    if (monthKey && /^\d{4}-\d{2}$/.test(monthKey)) {
+      const [y, m] = monthKey.split("-").map(Number);
+      dateFilter = { gte: new Date(y, m - 1, 1), lt: new Date(y, m, 1) };
+    }
   }
 
   try {
@@ -228,7 +235,7 @@ router.get("/leaderboard", async (req: AuthRequest, res: Response) => {
         followed: true,
         bet: {
           status: { not: "PENDING" },
-          ...(from ? { createdAt: { gte: from } } : {}),
+          ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
         },
       },
       include: {
